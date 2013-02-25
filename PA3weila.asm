@@ -10,8 +10,8 @@ intro: 			.asciiz	"Letter Frequency Analysis by, Austin Dubina \n"
 prompt1: 		.asciiz	"Enter a string to analyze:\n"
 colon:			.ascii	":"
 text:			.space 1024
-freq:			.space 208 # odd words = i(char of alpha)
-				   # even words = j(freq of alpha)
+			.align 2
+freq:			.space 208 
 
 #########################################################################
 #	Stack Frame Architecture					#
