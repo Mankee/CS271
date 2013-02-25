@@ -9,9 +9,18 @@
 intro: 			.asciiz	"Letter Frequency Analysis by, Austin Dubina \n"
 prompt1: 		.asciiz	"Enter a string to analyze:\n"
 colon:			.ascii	":"
+
+			.align 2
 text:			.space 1024
+<<<<<<< HEAD
 			.align 2
 freq:			.space 208 
+=======
+
+			.align 2
+freq:			.space 208 # odd words = i(char of alpha)
+				   # even words = j(freq of alpha)
+>>>>>>> minor bug fixes related to boundary condition errors
 
 #########################################################################
 #	Stack Frame Architecture					#
@@ -96,8 +105,8 @@ setup:
 
 #	initialize the freq[i] array with char values 'A'-'Z'		
 #########################################################################
-loop1:	sw   	$s2, freq($s0), 	# freq[i] = tmp2		
-	addi	$s0, $s0, 8		# i = i + 8	
+loop1:	sw   	$s2, freq($s0)	 	# freq[i] = tmp2		
+	addi	$s0, $s0, 4		# i = i + 8	
 	addi	$s2, $s2, 1		# tmp1 = tmp1 + 1		
 	ble	$s2, $s3, loop1		# branch if tmp1(A) <= tmp2(Z)	
 #########################################################################
@@ -160,14 +169,14 @@ analyze:
 	li	$s2, 65			# tmp1 = 'A' 
 	li	$s3, 90			# tmp2 = 'Z'
 		 
-loop2:	lw   	$a2, freq($s0)		# arg2 = freq[i]
+loop2:	lb   	$a2, freq($s0)		# arg2 = freq[i]
 	
 	sw  	$a0, 0($sp)		# (caller) saving args $a0-$a3
 	sw	$a1, 4($sp)	
 	sw	$a2, 8($sp)
 	sw	$a3, 12($sp)
-	jal	count			# call procedure (count)	
-	sw	$v0, freq($s1)		# freq[j] = return(count)
+	jal	count			# call procedure (count)
+	sw	$v0, freq+4($s0)	# freq[j] = return(count)
 	lw   	$a0, 0($sp)		# (caller) restoring args $a0-$a3
 	lw	$a1, 4($sp)	
 	lw	$a2, 8($sp)
@@ -205,10 +214,10 @@ loop2:	lw   	$a2, freq($s0)		# arg2 = freq[i]
 # $s0 = k (text idx)
 # $s1 = NULL Char
 # $s2 = tmp1= text[k]
-# $s3 = tmp2 = arg2 + 32
+# $s3 = tmp2 = tmp1 + 32
 
+count:
 # Callee(analyze) procedure (prologue)
-	lw	$t0, 24($sp)		# arg(0) = tmp1 from caller
 	addiu	$sp, $sp, -36		# pushing the stack
 	sw	$ra, 32($sp)		# save return address
 	
@@ -218,10 +227,13 @@ loop2:	lw   	$a2, freq($s0)		# arg2 = freq[i]
 	sw	$s3, 28($sp)
 
 # Callee(analyze) procedure (body)
-count:	li	$v0, 0			# n = 0
+	li	$v0, 0			# n = 0
 	li	$s0, 0 			# k = 0
+	li	$s1, 10			# new line LF
+	li	$s2, 0
+	li	$s3, 0
 	
-loop3:	lw 	$s2, text($s0)		# tmp3 = text[k]
+loop3:	lb 	$s2, text($s0)		# tmp3 = text[k]
 	beq	$s2, $s1, exit	 	# branch if text[k] = NULL
 	bne	$s2, $a2, cont1		# if tmp1 != arg2, else (cont1)
 	addi	$v0, $v0, 1		# n++
