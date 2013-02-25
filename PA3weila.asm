@@ -18,12 +18,6 @@ freq:			.space 108 # odd words = i(char of alpha)
 #########################################################################
 
 	#################
-# 52	#    $t3	#
-	#################
-# 48	#    $t2	#
-	#################
-# 44	#    $t1	#
-	#################
 # 40	#    $t0	#
 	#################
 # 36	#    padding	#	
@@ -53,14 +47,14 @@ freq:			.space 108 # odd words = i(char of alpha)
 				   				   				   				   				   				   				   				   		   				   				   				   				   				   				   				   		   				   				   				   				   				   				   				   
 .text
 #########################################################################
-#	Main Program							#
+#	main()								#
 #########################################################################
 main:
 	jal setup
 	jal analyze
 	jal results
 	
-	li $v0, 10		# exit
+	li $v0, 10			# exit
 	syscall
 
 
@@ -68,7 +62,7 @@ main:
 
 
 #########################################################################
-#	Setup()								#
+#	void Setup()								#
 #########################################################################
 # Pseudocode:
 # while (i < 26)
@@ -86,10 +80,10 @@ main:
 
 setup:	
 # Callee procedure (prologue)
-	addiu	$sp, $sp, -36	# pushing the stack
-	sw	$ra, 32($sp)	# save return address
+	addiu	$sp, $sp, -36		# pushing the stack
+	sw	$ra, 32($sp)		# save return address
 	
-	sw	$s0, 16($sp)	# saving temprary registers
+	sw	$s0, 16($sp)		# saving temprary registers
 	sw	$s1, 20($sp)
 	sw	$s2, 24($sp)
 	sw	$s3, 28($sp)
@@ -110,33 +104,33 @@ loop1:	sw 	$s2, freq($s0), 	# freq[i] = tmp2		#
 	ble	$s2, $s3, loop1		# branch if tmp1(A) <= tmp2(Z)	#
 #########################################################################
 
-	li	$v0, 4		# Print (intro)
+	li	$v0, 4			# Print (intro)
 	la	$a0, intro		
 	syscall	
 	
-	la	$a0, prompt1	# print (prompt1)
+	la	$a0, prompt1		# print (prompt1)
 	syscall
 	
-	li	$v0, 8		# read string (text)
+	li	$v0, 8			# read string (text)
 	la	$a0, text
 	syscall
 	
-	jr	$ra		# return (main)
+	jr	$ra			# return (main)
 
 # Callee procuedure (epilogue)
-	lw 	$s0, 16($sp)	# restore temporary variables
+	lw 	$s0, 16($sp)		# restore temporary variables
 	lw	$s1, 20($sp)
 	lw	$s2, 24($sp)
 	lw	$s3, 28($sp)
 	
-	addiu 	$sp, $sp, 36	# popping the stack
+	addiu 	$sp, $sp, 36		# popping the stack
 
-	jr	$ra		# return(void) main
+	jr	$ra			# return(void) main
 
 
 
 ##########################################################################
-#	Analyze								 #
+#	void Analyze()							 #
 ##########################################################################
 # Pseudocode:
 # while (l < 26)
@@ -145,37 +139,50 @@ loop1:	sw 	$s2, freq($s0), 	# freq[i] = tmp2		#
 # return void
 
 # Registers:
-# $t0 = i (alpha idx)
-# $t1 = j (freq idx)
-# $t2 = tmp1 = starting ascii char ("A") = 65
-# $t3 = tmp2 = ending ascii char ("Z") = 90
+# $s0 = i (alpha idx)
+# $s1 = j (freq idx)
+# $s2 = tmp1 = starting ascii char ("A") = 65
+# $s3 = tmp2 = ending ascii char ("Z") = 90
 # $a1 = input buffer
+# $a2 = l = freq[i]
 
-# Callee procedure prologue
-
-# Callee procedure body
-analyze:li	$t0, 0			# i = 0
-	li	$t1, 4			# j = 1
-	li	$t2, 65			# tmp1 = 'A' 
-	li	$t3, 90			# tmp2 = 'Z'
+analyze:
+# Callee procedure (prologue)
+	addiu	$sp, $sp, -36		# pushing the stack
+	sw	$ra, 32($sp)		# save return address
+	
+	sw	$s0, 16($sp)		# saving temprary registers
+	sw	$s1, 20($sp)
+	sw	$s2, 24($sp)
+	sw	$s3, 28($sp)
+	
+# Callee procedure (body)
+	li	$s0, 0			# i = 0
+	li	$s1, 4			# j = 4
+	li	$s2, 65			# tmp1 = 'A' 
+	li	$s3, 90			# tmp2 = 'Z'
 		 
-loop2:	lw  	$a2, freq($t0)		# arg2 = freq[i]
+loop2:	lw  	$a2, freq($s0)		# arg2 = freq[i]
 	jal	count			# call procedure (count)	
-	sw	$v0, freq($t1)		# freq[j] = return
-	addi	$t0, $t0, 8		# i = i + 8
-	addi	$t1, $t0, 4		# j = i + 4
-	ble	$a2, $t3, loop2		# branch if arg2 <= 90 ('Z')
+	sw	$v0, freq($s1)		# freq[j] = return
+	addi	$s0, $s0, 8		# i = i + 8
+	addi	$s1, $s0, 4		# j = i + 4
+	ble	$a2, $s3, loop2		# branch if arg2 <= 90 ('Z')
+
+# Callee procuedure (epilogue)
+	lw 	$s0, 16($sp)		# restore temporary variables
+	lw	$s1, 20($sp)
+	lw	$s2, 24($sp)
+	lw	$s3, 28($sp)
+	
+	addiu 	$sp, $sp, 36		# popping the stack
 
 	jr	$ra			# return(void) main
-
-# Callee procedure epilogue
-
-
 
 
 
 ##########################################################################
-#	Count								 #
+#	int Count(l)							 #
 ##########################################################################	
 # Pseudocode:
 # while (text[k] != NULL)
@@ -186,10 +193,10 @@ loop2:	lw  	$a2, freq($t0)		# arg2 = freq[i]
 #
 # Registers:
 # $v0 = n
-# $t4 = k (text idx)
-# $t5 = NULL Char
-# $t6 = tmp3 = text[k]
-# $t7 = tmp4 = arg2 + 32
+# $t4 = $s0 = k (text idx)
+# $t5 = $s1 = NULL Char
+# $t6 = $s2 = tmp1= text[k]
+# $t7 = $s3 = tmp2 = arg2 + 32
 
 # Callee procedure prologue
 
@@ -208,7 +215,7 @@ cont1:	addi	$t7, $a2, 32 		# tmp4 = arg2 + 32
 cont2:	addi	$t4, $t4, 1		# k++
 	bne	text($t4), $t5, loop3 	# branch if text[k] != NULL
 
-	jr	$ra			# return (analyze)
+	jr	$ra			# return(n) analyze
 	
 # Callee procedure epilogue
 
