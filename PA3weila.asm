@@ -12,22 +12,16 @@ colon:			.ascii	":"
 
 			.align 2
 text:			.space 1024
-<<<<<<< HEAD
-			.align 2
-freq:			.space 208 
-=======
 
 			.align 2
-freq:			.space 208 # odd words = i(char of alpha)
-				   # even words = j(freq of alpha)
->>>>>>> minor bug fixes related to boundary condition errors
+freq:			.space 208 
+
 
 #########################################################################
 #	Stack Frame Architecture					#
 #########################################################################
 
-	#################
-# 36	#    padding	#	
+	
 	#################
 # 32	#    $ra	#
 	#################
@@ -87,7 +81,7 @@ main:
 
 setup:	
 # Callee(main) procedure (prologue)
-	addiu	$sp, $sp, -36		# pushing the stack
+	addiu	$sp, $sp, -32		# pushing the stack
 	sw	$ra, 32($sp)		# save return address
 	
 	sw	$s0, 16($sp)		# saving temprary registers
@@ -130,7 +124,7 @@ loop1:	sw   	$s2, freq($s0)	 	# freq[i] = tmp2
 	lw	$s2, 24($sp)
 	lw	$s3, 28($sp)
 	
-	addiu 	$sp, $sp, 36		# popping the stack
+	addiu 	$sp, $sp, 32		# popping the stack
 
 	jr	$ra			# return(void) main
 
@@ -155,7 +149,7 @@ loop1:	sw   	$s2, freq($s0)	 	# freq[i] = tmp2
 
 analyze:
 # Callee(main)->caller(count) procedure (prologue)
-	addiu	$sp, $sp, -36		# pushing the stack
+	addiu	$sp, $sp, -32		# pushing the stack
 	sw	$ra, 32($sp)		# save return address	
 	
 	sw	$s0, 16($sp)		# (callee)saving temprary registers
@@ -176,7 +170,7 @@ loop2:	lb   	$a2, freq($s0)		# arg2 = freq[i]
 	sw	$a2, 8($sp)
 	sw	$a3, 12($sp)
 	jal	count			# call procedure (count)
-	sw	$v0, freq+4($s0)	# freq[j] = return(count)
+	sw	$v0, freq($s1)		# freq[j] = return(count)
 	lw   	$a0, 0($sp)		# (caller) restoring args $a0-$a3
 	lw	$a1, 4($sp)	
 	lw	$a2, 8($sp)
@@ -192,7 +186,7 @@ loop2:	lb   	$a2, freq($s0)		# arg2 = freq[i]
 	lw	$s2, 24($sp)
 	lw	$s3, 28($sp)
 	
-	addiu 	$sp, $sp, 36		# popping the stack
+	addiu 	$sp, $sp, 32		# popping the stack
 
 	jr	$ra			# return(void) main
 
@@ -218,7 +212,7 @@ loop2:	lb   	$a2, freq($s0)		# arg2 = freq[i]
 
 count:
 # Callee(analyze) procedure (prologue)
-	addiu	$sp, $sp, -36		# pushing the stack
+	addiu	$sp, $sp, -32		# pushing the stack
 	sw	$ra, 32($sp)		# save return address
 	
 	sw	$s0, 16($sp)		# saving temprary registers
@@ -235,11 +229,11 @@ count:
 	
 loop3:	lb 	$s2, text($s0)		# tmp3 = text[k]
 	beq	$s2, $s1, exit	 	# branch if text[k] = NULL
-	bne	$s2, $a2, cont1		# if tmp1 != arg2, else (cont1)
+	bne	$s2, $a2, cont1		# if text[k] != arg2, else (cont1)
 	addi	$v0, $v0, 1		# n++
 	
 cont1:	addi	$s3, $a2, 32 		# tmp2 = arg2 + 32  
-	bne	$s3, $a2, cont2		# if tmp2 != arg2, else (cont2)
+	bne	$s2, $s3, cont2		# if text[k] != arg2 + 32, else (cont2)
 	addi	$v0, $v0, 1		# n++
 
 cont2:	addi	$s0, $s0, 1		# k++
@@ -253,7 +247,7 @@ exit:	jr	$ra			# return(n) analyze
 	lw	$s2, 24($sp)
 	lw	$s3, 28($sp)
 	
-	addiu 	$sp, $sp, 36		# popping the stack
+	addiu 	$sp, $sp, 32		# popping the stack
 
 	jr	$ra			# return(void) main
 
@@ -277,7 +271,7 @@ exit:	jr	$ra			# return(n) analyze
 # $s3 = tmp2
 
 # Callee(main) procedure (prologue)
-	addiu	$sp, $sp, -36		# pushing the stack
+	addiu	$sp, $sp, -32		# pushing the stack
 	sw	$ra, 32($sp)		# save return address
 	
 	sw	$s0, 16($sp)		# saving temprary registers
@@ -314,6 +308,6 @@ loop4:	li	$v0, 11			# Print (freq[i])
 	lw	$s2, 24($sp)
 	lw	$s3, 28($sp)
 	
-	addiu 	$sp, $sp, 36		# popping the stack
+	addiu 	$sp, $sp, 32		# popping the stack
 
 	jr	$ra			# return(void) main
