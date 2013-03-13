@@ -78,27 +78,34 @@
 # Pseudocode:
 # void main(){
 # 	print (intro);
-# 	readline (userName);
-#	getN(userName);
-#	print (recursive);
-#	testFib(f, n);
-#	print (memoization);
-#	testFib(f, n);
+#	n = getN;
+#	testFib(fib, n);
+#	testFib(fibM, n);
 #	return 0;
 # }
 # Registers:
 
-	addiu	$sp, $sp, -16	# procedure prologue - pushing stack
 	
-	li	$v0, 4		# Print (intro)
-	la	$a0, intro		
-	syscall	
+main:		addiu	$sp, $sp, -16	# procedure prologue - pushing stack
+		li	$t0, 0		# initialize n = 0
 	
-	jal	getN  		# getN	
+		li	$v0, 4		# Print (intro)
+		la	$a0, intro		
+		syscall	
+	
+		jal	getN  		# n = getN()
+
+		la	$a0, fib 	# testFib(fib, n)
+		move 	$a1, $v0
+		jal	testFib		
+	
+		#la	$a0, fibM 	# testFib(fibM, n)
+		#move 	$a1, $v0
+		#jal	testFib	
 		
-	addiu $sp, $sp, 16	# procedure epilogue - remove stack
-	li    $v0, 10		# exit
-	syscall
+		addiu $sp, $sp, 16	# procedure epilogue - remove stack
+		li    $v0, 10		# exit
+		syscall
 
 #########################################################################
 #	  int getN()						 	#
@@ -117,29 +124,60 @@
 # Register mappings:
 # max => $t0, n => $t1
 
-getN:	addiu	$sp, $sp, -16	# procedure prologue - pushing stack
-	li	$t0, 25		# max = 25
-	li	$t1, 0		# n = 0
+getN:		addiu	$sp, $sp, -16	# procedure prologue - pushing stack
+		li	$t0, 25		# max = 25
+		li	$t1, 0		# n = 0
 	
-getNL:	li	$v0, 4		# print (nl)
-	la	$a0, nl
-	syscall
+getNLoopoop:	li	$v0, 4		# print (nl)
+		la	$a0, nl
+		syscall
 	
-	la	$a0, prompt	# print (prompt)
-	syscall
+		la	$a0, prompt	# print (prompt)
+		syscall
 	
-	li	$v0, 5		# read integer(n)
-	syscall
-	move 	$t1, $v0	
+		li	$v0, 5		# read integer(n)
+		syscall
+		move 	$t1, $v0	
 
-	blez	$t1, wrong	# if n < 0 goto (wrong)
-	bgt	$t1, $t0, wrong	# if n > 25 goto (wrong)
+		blez	$t1, wrong	# if n < 0 goto (wrong)
+		bgt	$t1, $t0, wrong	# if n > 25 goto (wrong)
 	
-	addiu 	$sp, $sp, 16	# procedure epilogue - remove stack
-	jr	$ra
+		addiu 	$sp, $sp, 16	# procedure epilogue - remove stack
+		jr	$ra
 
-wrong:	li	$v0, 4		# print (range)
-	la	$a0, range
-	syscall
+wrong:		li	$v0, 4		# print (range)
+		la	$a0, range
+		syscall
 	
-	j getNL
+		j getNLoop
+
+#########################################################################
+#	  void testFib(f, n)					 	#
+#########################################################################
+# Pseudocode:
+# start (timer)
+# 
+# stop (timer)
+#
+# registers:
+# 
+
+testFib:	addiu	$sp, $sp, -16	# procedure prologue - pushing stack
+		sw	$ra, 16($sp)
+		
+		li	$v0, 30
+		li	
+		
+		lw	$ra, 16($sp)
+		addiu 	$sp, $sp, 16	# procedure epilogue - remove stack
+		jr	$ra
+
+#########################################################################
+#	  int fib(int n)					 	#
+#########################################################################
+# Pseudocode:
+
+
+
+
+
