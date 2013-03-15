@@ -59,7 +59,11 @@
 .data
 
 	# Program Variables
-	userName:		.space	64
+	
+	# memoization table -- enough space for 25 results
+	memo:			.word 	0	# fact(0) = 0
+				.word	1	# fact(1) = 1
+				.space	96	# space 
 	
 	# string prompts
 	intro: 			.ascii	"Computing Fibonacci numbers, Part II \n" 
@@ -68,10 +72,9 @@
 	range:			.asciiz "That number was out of range, try again"
 	recursive:		.asciiz "== Purely Recursive ==\n"
 	memoization:		.asciiz "== With Memoization ==\n"
-	ninesps:		.asciiz "         "
-	spaces:			.asciiz "    "
-	space:			.asciiz " "
 	nl:			.asciiz "\n"
+	time:			.asciiz "Time: "
+	result:			.asciiz "Result: "
 
 .text	
 #########################################################################
@@ -156,8 +159,7 @@ getNLoop:	li	$v0, 4		# print (nl)
 		syscall
 	
 		li	$v0, 5		# read integer(n)
-		syscall
-		#move 	$t1, $v0	
+		syscall	
 
 		blez	$v0, wrong	# if n < 0 goto (wrong)
 		bgt	$v0, $t0, wrong	# if n > 25 goto (wrong)
@@ -187,6 +189,11 @@ testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 		addiu	$sp, $sp, -32	# procedure prologue - pushing stack
 		sw	$ra, 16($sp)
 		
+		# start timer
+		li	$v0, 30
+		syscall 
+		move	$s0, $a0
+		
 		# start of int fib(n) Caller
 		sw	$t0, 24($sp)	# save arg0(f)
 		sw 	$t1, 28($sp)	# save arg1(n)
@@ -198,10 +205,32 @@ testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 		lw	$t1, 28($sp)	# restore arg1(n)
 		move 	$t2, $v0	# tmp = fib(n)
 		# end of int fib() Caller
+
+		# stop timer
+		li	$v0, 30
+		syscall 
+		move	$s1, $a0
+
+		li	$v0, 4		# print(result)
+		la	$a0, result
+		syscall
 		
-		li	$v0, 1
+		li	$v0, 1		# print(x)
 		la	$a0, ($t2)
 		syscall
+		
+		li	$v0, 4		# print(nl)
+		la	$a0, nl
+		syscall
+		
+		li	$v0, 4		# print(time)
+		la	$a0, time
+		syscall
+		
+		sub	$a0, $s1, $s0	# time delta
+		
+		li	$v0, 1		# print(y)
+		syscall		
 		
 		lw	$ra, 16($sp)
 		addiu 	$sp, $sp, 32	# procedure epilogue - remove stack
@@ -213,9 +242,15 @@ testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 # Pseudocode:
 # int fib(int n) {
 # 	if (n < 2){
-#     		return 1;
+#		if (n == 1){
+#			n-2 = 0;
+#			n-1 = 1;
+#			x = (n-2) + (n-1);
+#			return x;
+#		}
 # 	}else{
-# 		return fibonacci(n-2) + fibonacci(n-1);
+# 		n--;
+#		fib(n);		
 #	}
 # }
 # Registers:
@@ -240,8 +275,8 @@ skip:		add	$v0, $t1, $t2	# f(n) = (n - 1) + (n - 2)
 		move	$t2, $t1
 		move 	$t1, $v0
 		
-		lw	$ra, 16($sp)
-		addiu 	$sp, $sp, 24	# procedure epilogue - pop stack
+		lw	$ra, 16($sp)	# procedure epilogue - pop stack
+		addiu 	$sp, $sp, 24	
 		jr	$ra
 
 #########################################################################
@@ -251,4 +286,12 @@ skip:		add	$v0, $t1, $t2	# f(n) = (n - 1) + (n - 2)
 #
 # Registers:
 #
-fibM:
+fibM:		lw	$t0, 0($sp)	# retrive variables from previous stack
+		addiu	$sp, $sp, -32	# procedure prologue - pushing stack
+		sw    	$ra, 16($sp)
+		
+		
+		
+		lw	$ra, 16($sp)	# procedure epilogue - pop stack
+		addiu 	$sp, $sp, 32	
+		jr	$ra
