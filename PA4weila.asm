@@ -15,8 +15,8 @@
 # +Print an introduction including your name, a title, and a notice of 	#
 #  any extra credit you attempted.					#
 # +Call the procedure getN and save the result, n.			#
-# -Print a purely recursive banner, as in the example output.		#
-# -Call the procedure testFib, passing a pointer to fib and the value n.#
+# +Print a purely recursive banner, as in the example output.		#
+# +Call the procedure testFib, passing a pointer to fib and the value n.#
 # -Print a with memoization banner, as in the example output.		#
 # -Call the procedure testFib, passing a pointer to fibM and the value n#
 # -Use the exit system call to end your program				#
@@ -41,13 +41,13 @@
 #########################################################################
 #	void testFib(f, n)						#
 #########################################################################
-# -This procedure takes two arguments: The first, f, is the address of a#
+# +This procedure takes two arguments: The first, f, is the address of a#
 #  function that takes an integer and produces an integer 		#
 #  (i.e. a function pointer). The second, n, is an integer.		#
 # -Get the current system time, start, using system call 30. you will 	#
 #  have to look at the MARS documentation (? button) to learn the 	#
 #  interface to this system call.					#
-# -Call the function f with argument n and save the result.		#
+# +Call the function f with argument n and save the result.		#
 # -Get the current system time, stop.					#
 # -Print out the result and the time it took to compute the value, 	#
 #  calculated as stop  start.						#
@@ -64,10 +64,10 @@
 	# string prompts
 	intro: 			.ascii	"Computing Fibonacci numbers, Part II \n" 
 				.asciiz "	by, Austin Dubina \n"
-	prompt:			.asciiz "Enter a number in range [1..25]"
+	prompt:			.asciiz "Enter a number in range [1..25] "
 	range:			.asciiz "That number was out of range, try again"
-	recursive:		.asciiz "== Purely Recursive =="
-	memoization:		.asciiz "== With Memoization =="
+	recursive:		.asciiz "== Purely Recursive ==\n"
+	memoization:		.asciiz "== With Memoization ==\n"
 	ninesps:		.asciiz "         "
 	spaces:			.asciiz "    "
 	space:			.asciiz " "
@@ -97,13 +97,18 @@ main:		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
 		syscall	
 	
 		jal	getN  		# n = getN()
-		move 	$t1, $v0
-
+		move 	$t1, $v0	
+		
+		li	$v0, 4		# print(recursive)
+		la	$a0, recursive
+		syscall
+		
+		la	$t0, fib	# f = fib
+		
 		# start of testFib(fib, n) caller
 		sw	$t0, 20($sp)	# save $t0
 		sw	$t1, 24($sp)	# save $t1
 
-		la	$t0, fib	# f = fib
 		sw	$t0, 0($sp)	# arg0 = f
 		sw	$t1, 4($sp)	# arg1 = n
 		jal	testFib		# jmp(testFib)
@@ -179,17 +184,18 @@ wrong:		li	$v0, 4		# print (range)
 
 testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 		lw	$t1, 4($sp)
-		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
+		addiu	$sp, $sp, -32	# procedure prologue - pushing stack
 		sw	$ra, 16($sp)
 		
 		# start of int fib(n) Caller
-		sw 	$t1, 24($sp)	# save arg1(n)
+		sw	$t0, 24($sp)	# save arg0(f)
+		sw 	$t1, 28($sp)	# save arg1(n)
 		
-		#move	0($sp), $t1	
 		sw	$t1, 0($sp)	# arg0 = n
 		jalr	$t0		# jmp(f)
 		
-		lw	$t1, 24($sp)	# restore arg1(n)
+		lw	$t0, 24($sp)	# restore arg0(f)
+		lw	$t1, 28($sp)	# restore arg1(n)
 		move 	$t2, $v0	# tmp = fib(n)
 		# end of int fib() Caller
 		
@@ -198,22 +204,44 @@ testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 		syscall
 		
 		lw	$ra, 16($sp)
-		addiu 	$sp, $sp, 24	# procedure epilogue - remove stack
+		addiu 	$sp, $sp, 32	# procedure epilogue - remove stack
 		jr	$ra
 
 #########################################################################
 #	  int fib(int n)					 	#
 #########################################################################
 # Pseudocode:
-#
+# int fib(int n) {
+# 	if (n < 2){
+#     		return 1;
+# 	}else{
+# 		return fibonacci(n-2) + fibonacci(n-1);
+#	}
+# }
 # Registers:
-# n = $t0
-fib:		sw	$t0, 0($sp)	# retrive variables from previous stack
+# n = $t0, x = $v0, n-1 = $t1, n-2 = $t2
+fib:		lw	$t0, 0($sp)	# retrive variables from previous stack
 		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
+		sw    	$ra, 16($sp)
 		
-		move	$v0, $t0 
+		blt   	$t0, 2, end	# if (n < 2) goto end
+	
+		sw    	$t0, 24($sp)	# (startup) save n
+		subi  	$t0, $t0, 1	# arg0 = n - 1
+		sw 	$t0, 0($sp)	# fib(n-1)
+		jal   	fib		
+		lw    	$t0, 24($sp)	# (cleanup) restore n
+
+end:		bne	$t0, 1, skip	# intialize seed values
+		li	$t1, 1		# n - 1 = 1
+		li	$t2, 0		# n - 2 = 0
 		
-		addiu 	$sp, $sp, 24	# procedure epilogue - remove stack
+skip:		add	$v0, $t1, $t2	# f(n) = (n - 1) + (n - 2)
+		move	$t2, $t1
+		move 	$t1, $v0
+		
+		lw	$ra, 16($sp)
+		addiu 	$sp, $sp, 24	# procedure epilogue - pop stack
 		jr	$ra
 
 #########################################################################
