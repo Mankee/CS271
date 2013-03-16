@@ -70,12 +70,13 @@
 				.asciiz "	by, Austin Dubina \n"
 	prompt:			.asciiz "Enter a number in range [1..25] "
 	range:			.asciiz "That number was out of range, try again"
-	recursive:		.asciiz "== Purely Recursive ==\n"
-	memoization:		.asciiz "== With Memoization ==\n"
+	recursive:		.asciiz "\n\n== Purely Recursive ==\n"
+	memoization:		.asciiz "\n\n== With Memoization ==\n"
 	nl:			.asciiz "\n"
 	time:			.asciiz "Time: "
 	result:			.asciiz "Result: "
-
+	goodbye:		.asciiz "\n\nProgram exited sucessfully, goodbye!"
+	
 .text	
 #########################################################################
 #	 void main()							#
@@ -102,7 +103,7 @@ main:		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
 		jal	getN  		# n = getN()
 		move 	$t1, $v0	
 		
-		li	$v0, 4		# print(recursive)
+		li	$v0, 4		# print(recursive) banner
 		la	$a0, recursive
 		syscall
 		
@@ -120,11 +121,27 @@ main:		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
 		sw	$t1, 24($sp)	# restore $t1	
 		# end of testFib(f, n) caller
 	
+		li	$v0, 4		# print(memoization) banner
+		la	$a0, memoization
+		syscall
+		
+		la	$t0, fibM	# f = fib
+		
 		# start of testFib(fibM, n) Caller
-		#la	$a0, fibM 	# testFib(fibM, n)
-		#move 	$a1, $v0
-		#jal	testFib	
+		sw	$t0, 20($sp)	# save $t0
+		sw	$t1, 24($sp)	# save $t1
+
+		sw	$t0, 0($sp)	# arg0 = f
+		sw	$t1, 4($sp)	# arg1 = n
+		jal	testFib		# jmp(testFib)
+		
+		sw	$t0, 20($sp)	# restore $t0
+		sw	$t1, 24($sp)	# restore $t1	
 		# end of testFib(fibM, n) Caller
+		
+		li	$v0, 4		# print(goodbye)
+		la	$a0, goodbye
+		syscall
 		
 		addiu $sp, $sp, 24	# procedure epilogue - remove stack
 		li    $v0, 10		# exit
@@ -241,41 +258,48 @@ testFib:	lw	$t0, 0($sp)	# retrieve variables from previous stack
 #########################################################################
 # Pseudocode:
 # int fib(int n) {
-# 	if (n < 2){
-#		if (n == 1){
-#			n-2 = 0;
-#			n-1 = 1;
-#			x = (n-2) + (n-1);
-#			return x;
-#		}
-# 	}else{
-# 		n--;
-#		fib(n);		
-#	}
+# 	if (n <= 2){
+#		return 1;
+# 	}   
+# 	x = fib(n - 1)
+# 	y = fib(n - 2)
+# 	x = x + y
+# 	return x
 # }
 # Registers:
-# n = $t0, x = $v0, n-1 = $t1, n-2 = $t2
+# n = $t0, x = $v0, $t1 = y = (n-1), $t2 = z = (n-2)
 fib:		lw	$t0, 0($sp)	# retrive variables from previous stack
 		addiu	$sp, $sp, -24	# procedure prologue - pushing stack
 		sw    	$ra, 16($sp)
 		
-		blt   	$t0, 2, end	# if (n < 2) goto end
+		li	$v0, 1		# return 1
+		ble   	$t0, 2, end	# if (n < 2) goto end
 	
 		sw    	$t0, 24($sp)	# (startup) save n
-		subi  	$t0, $t0, 1	# arg0 = n - 1
+		sw	$t1, 28($sp)	# save y
+		sw	$t2, 32($sp)	# save z
+		subi  	$t0, $t0, 2	# arg0 = n - 1
 		sw 	$t0, 0($sp)	# fib(n-1)
-		jal   	fib		
+		jal   	fib	
 		lw    	$t0, 24($sp)	# (cleanup) restore n
-
-end:		bne	$t0, 1, skip	# intialize seed values
-		li	$t1, 1		# n - 1 = 1
-		li	$t2, 0		# n - 2 = 0
+		lw    	$t1, 28($sp)	# (cleanup) restore y
+		lw    	$t2, 32($sp)	# (cleanup) restore z
+		move	$t1, $v0	# y = n - 1
 		
-skip:		add	$v0, $t1, $t2	# f(n) = (n - 1) + (n - 2)
-		move	$t2, $t1
-		move 	$t1, $v0
+		sw    	$t0, 24($sp)	# (startup) save n
+		sw	$t1, 28($sp)	# save y
+		sw	$t2, 32($sp)	# save z
+		subi  	$t0, $t0, 1	# arg0 = n - 2
+		sw 	$t0, 0($sp)	# fib(n - 2)
+		jal   	fib	
+		lw    	$t0, 24($sp)	# (cleanup) restore n
+		lw    	$t1, 28($sp)	# (cleanup) restore y
+		lw    	$t2, 32($sp)	# (cleanup) restore z
+		move	$t2, $v0	# z = n - 2
 		
-		lw	$ra, 16($sp)	# procedure epilogue - pop stack
+		add	$v0, $t1, $t2	# x = y + z
+		
+end:		lw	$ra, 16($sp)	# procedure epilogue - pop stack
 		addiu 	$sp, $sp, 24	
 		jr	$ra
 
@@ -283,15 +307,49 @@ skip:		add	$v0, $t1, $t2	# f(n) = (n - 1) + (n - 2)
 #	  int fibM(int n)					 	#
 #########################################################################
 # Pseudocode:
+# int fibM(int n) {
+# 	r = memo[n]
+#     	if (r == 0) {
+#       	x = fibM(n-1)
+#       	y = fibM(n-2)
+#       	r = x+y
+#       	memo[n] = r
+#     	}
+#	return r
+# }
 #
 # Registers:
-#
+# n = $t0, i = $t1, x = $v0, $t2 = [i - 1], $t3 = [i - 2]
+
 fibM:		lw	$t0, 0($sp)	# retrive variables from previous stack
 		addiu	$sp, $sp, -32	# procedure prologue - pushing stack
 		sw    	$ra, 16($sp)
 		
+		mul   	$t1, $t0, 4	# i = n * 4
+		lw    	$v0, memo($t1)	# x = memo[i]
+		bnez  	$v0, end2	# branch if (x == 0)
+	
+		sw    	$t0, 24($sp)	# (startup) save n
+		sw	$t1, 28($sp)	# save i
+		subi  	$t0, $t0, 1	# arg0 = n - 1
+		sw 	$t0, 0($sp)	# fib(n-1)
+		jal   	fibM		
+		lw    	$t0, 24($sp)	# (cleanup) restore n
+		lw	$t1, 28($sp)	# restore i
 		
+		subi	$t0, $t0, 1	# [n - 1] = n - 1
+		mul	$t1, $t0, 4	# i = n * 4
+		lw	$t2, memo($t1)	
 		
-		lw	$ra, 16($sp)	# procedure epilogue - pop stack
+		subi	$t0, $t0, 1	# [n - 2] = n - 1
+		mul	$t1, $t0, 4	# i = n * 4
+		lw	$t3, memo($t1)	 
+		
+		add	$v0, $t2, $t3	# f(n) = [n - 2] + [n - 1]		
+		addi	$t0, $t0, 2	# n = n + 2
+		mul	$t1, $t0, 4	
+		sw	$v0, memo($t1) # 
+		
+end2:		lw	$ra, 16($sp)	# procedure epilogue - pop stack
 		addiu 	$sp, $sp, 32	
 		jr	$ra
